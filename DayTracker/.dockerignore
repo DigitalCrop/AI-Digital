@@ -1,0 +1,29 @@
+# Dependencies & build artifacts
+node_modules
+dist
+coverage
+*.log
+npm-debug.log*
+
+# Git / IDE
+.git
+.gitignore
+.github
+.vscode
+.idea
+*.md
+
+# Env & local secrets (none used today; keep excluded for safety)
+.env
+.env.*
+!.env.example
+
+# Docker (avoid recursive context noise)
+Dockerfile
+.dockerignore
+docker-compose*.yml
+
+# Tests / misc
+**/*.test.js
+**/*.spec.js
+deploy.sh
