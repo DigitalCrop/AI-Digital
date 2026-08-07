@@ -21,7 +21,7 @@ function CompletedPage({
     <div className="space-y-4 animate-fade-in">
       <header>
         <h1 className="font-display text-2xl font-bold text-slate-900 dark:text-white">
-          Recently Completed
+          Recently Completed successfully
         </h1>
         <p className="mt-1 text-sm text-slate-500">
           Review finished work and reopen anything that needs another pass.
