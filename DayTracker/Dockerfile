@@ -19,12 +19,12 @@ RUN rm -f /etc/nginx/conf.d/default.conf
 COPY nginx.conf /etc/nginx/conf.d/default.conf
 
 # Copy only the built assets (no node_modules, no source)
-COPY --from=builder /app/dist /usr/share/nginx/html
+COPY --from=builder /app/dist /usr/share/nginx/html/daytracker
 
 # Non-root friendly: nginx alpine already runs workers as nginx user
 EXPOSE 80
 
 HEALTHCHECK --interval=30s --timeout=5s --start-period=10s --retries=3 \
-  CMD wget -qO- http://127.0.0.1/health || exit 1
+  CMD wget -qO- http://127.0.0.1/daytracker/health || exit 1
 
 CMD ["nginx", "-g", "daemon off;"]
