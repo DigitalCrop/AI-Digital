@@ -42,7 +42,7 @@ jobs:
       - name: Set up Node.js
         uses: actions/setup-node@v4
         with:
-          node-version: '20'
+          node-version: '24'
           cache: npm
           cache-dependency-path: smarttrade-india/package-lock.json
 
@@ -82,8 +82,8 @@ jobs:
       - name: Build and push backend image
         uses: docker/build-push-action@v6
         with:
-          context: .
-          file: docker/Dockerfile.backend
+          context: smarttrade-india
+          file: smarttrade-india/docker/Dockerfile.backend
           push: true
           tags: |
             ${{ steps.meta.outputs.image_base }}-backend:latest
@@ -94,8 +94,8 @@ jobs:
       - name: Build and push frontend image
         uses: docker/build-push-action@v6
         with:
-          context: .
-          file: docker/Dockerfile.frontend
+          context: smarttrade-india
+          file: smarttrade-india/docker/Dockerfile.frontend
           push: true
           tags: |
             ${{ steps.meta.outputs.image_base }}-frontend:latest
