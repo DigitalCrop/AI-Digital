@@ -16,7 +16,7 @@ env:
   REGISTRY: ghcr.io
   TIMEPASS_HOST: ${{ vars.TIMEPASS_HOST || '127.0.0.1' }}
   TIMEPASS_PORT: ${{ vars.TIMEPASS_PORT || '3100' }}
-  TIMEPASS_CLIENT_URL: ${{ vars.TIMEPASS_CLIENT_URL }}
+  TIMEPASS_CLIENT_URL: ${{ vars.TIMEPASS_CLIENT_URL || format('http://{0}/timpass', secrets.DO_HOST) }}
   TIMEPASS_SESSION_SECRET: ${{ secrets.TIMEPASS_SESSION_SECRET }}
 
 jobs:
@@ -111,7 +111,7 @@ jobs:
             SHARED_NETWORK="ai-digital-network"
 
             if [ -z "${TIMEPASS_CLIENT_URL:-}" ]; then
-              echo "TIMEPASS_CLIENT_URL repository variable is required"
+              echo "Could not resolve the TimePass public URL from TIMEPASS_CLIENT_URL or DO_HOST"
               exit 1
             fi
             if [ -z "${TIMEPASS_SESSION_SECRET:-}" ]; then
