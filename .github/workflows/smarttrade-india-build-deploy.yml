@@ -1,0 +1,253 @@
+name: Docker Build & Deploy SmartTrade India
+
+on:
+  push:
+    branches: [main]
+    paths:
+      - 'smarttrade-india/**'
+      - '.github/workflows/smarttrade-india-build-deploy.yml'
+  workflow_dispatch:
+
+concurrency:
+  group: smarttrade-india-production
+  cancel-in-progress: false
+
+env:
+  REGISTRY: ghcr.io
+  IMAGE_NAME: smarttrade-india
+  SHARED_NETWORK: ai-digital-network
+  CONTAINER_BASENAME: smarttrade-india
+  DOCKER_HOST_PORT: 8080
+  POSTGRES_USER: ${{ vars.SMARTTRADE_POSTGRES_USER || 'smarttrade' }}
+  POSTGRES_PASSWORD: ${{ secrets.SMARTTRADE_POSTGRES_PASSWORD || 'smarttrade_secret' }}
+  POSTGRES_DB: ${{ vars.SMARTTRADE_POSTGRES_DB || 'smarttrade_db' }}
+  POSTGRES_HOST_PORT: 5432
+  REDIS_HOST_PORT: 6379
+
+jobs:
+  build-and-deploy:
+    runs-on: ubuntu-latest
+    permissions:
+      contents: read
+      packages: write
+
+    defaults:
+      run:
+        working-directory: smarttrade-india
+
+    steps:
+      - name: Checkout source code
+        uses: actions/checkout@v4
+
+      - name: Set up Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: '20'
+          cache: npm
+          cache-dependency-path: smarttrade-india/package-lock.json
+
+      - name: Install dependencies
+        run: npm ci
+
+      - name: Build shared package
+        run: npm run build --workspace=@smarttrade/shared
+
+      - name: Build backend
+        run: npm run build --workspace=@smarttrade/backend
+
+      - name: Build frontend
+        run: npm run build --workspace=@smarttrade/frontend
+
+      - name: Set image metadata
+        id: meta
+        shell: bash
+        run: |
+          OWNER_LC=$(echo "${{ github.repository_owner }}" | tr '[:upper:]' '[:lower:]')
+          REPO_LC=$(echo "${{ github.event.repository.name }}" | tr '[:upper:]' '[:lower:]')
+          SHA_SHORT=$(echo "${{ github.sha }}" | cut -c1-7)
+          IMAGE_BASE="${{ env.REGISTRY }}/${OWNER_LC}/${REPO_LC}-${{ env.IMAGE_NAME }}"
+          echo "image_base=${IMAGE_BASE}" >> "$GITHUB_OUTPUT"
+          echo "sha_short=${SHA_SHORT}" >> "$GITHUB_OUTPUT"
+
+      - name: Log in to GitHub Container Registry
+        uses: docker/login-action@v3
+        with:
+          registry: ${{ env.REGISTRY }}
+          username: ${{ github.actor }}
+          password: ${{ secrets.GITHUB_TOKEN }}
+
+      - name: Set up Docker Buildx
+        uses: docker/setup-buildx-action@v3
+
+      - name: Build and push backend image
+        uses: docker/build-push-action@v6
+        with:
+          context: .
+          file: docker/Dockerfile.backend
+          push: true
+          tags: |
+            ${{ steps.meta.outputs.image_base }}-backend:latest
+            ${{ steps.meta.outputs.image_base }}-backend:${{ steps.meta.outputs.sha_short }}
+          cache-from: type=gha,scope=smarttrade-india-backend
+          cache-to: type=gha,mode=max,scope=smarttrade-india-backend
+
+      - name: Build and push frontend image
+        uses: docker/build-push-action@v6
+        with:
+          context: .
+          file: docker/Dockerfile.frontend
+          push: true
+          tags: |
+            ${{ steps.meta.outputs.image_base }}-frontend:latest
+            ${{ steps.meta.outputs.image_base }}-frontend:${{ steps.meta.outputs.sha_short }}
+          cache-from: type=gha,scope=smarttrade-india-frontend
+          cache-to: type=gha,mode=max,scope=smarttrade-india-frontend
+
+      - name: Deploy to DigitalOcean via SSH
+        uses: appleboy/ssh-action@v1.2.0
+        with:
+          host: ${{ secrets.DO_HOST }}
+          username: ${{ secrets.DO_USERNAME }}
+          key: ${{ secrets.DO_SSH_KEY }}
+          passphrase: ${{ secrets.DO_SSH_PASSPHRASE }}
+          envs: DATABASE_URL,REDIS_URL,JWT_SECRET,ENCRYPTION_KEY,CORS_ORIGIN
+          script: |
+            set -euo pipefail
+
+            IMAGE_BASE="${{ steps.meta.outputs.image_base }}"
+            BACKEND_IMAGE="${IMAGE_BASE}-backend:latest"
+            FRONTEND_IMAGE="${IMAGE_BASE}-frontend:latest"
+            CONTAINER_BACKEND="${{ env.CONTAINER_BASENAME }}-backend"
+            CONTAINER_FRONTEND="${{ env.CONTAINER_BASENAME }}-frontend"
+            CONTAINER_NGINX="${{ env.CONTAINER_BASENAME }}-nginx"
+            CONTAINER_POSTGRES="${{ env.CONTAINER_BASENAME }}-postgres"
+            CONTAINER_REDIS="${{ env.CONTAINER_BASENAME }}-redis"
+            NETWORK="${{ env.SHARED_NETWORK }}"
+            POSTGRES_USER="${{ env.POSTGRES_USER }}"
+            POSTGRES_PASSWORD="${{ env.POSTGRES_PASSWORD }}"
+            POSTGRES_DB="${{ env.POSTGRES_DB }}"
+            POSTGRES_HOST=postgres
+            REDIS_HOST=redis
+            DB_URL="postgresql://${POSTGRES_USER}:${POSTGRES_PASSWORD}@${POSTGRES_HOST}:5432/${POSTGRES_DB}"
+
+            if [ -z "${JWT_SECRET:-}" ] || [ -z "${ENCRYPTION_KEY:-}" ]; then
+              echo "JWT_SECRET and ENCRYPTION_KEY must be set on the remote host or provided as environment variables."
+              exit 1
+            fi
+
+            echo "${{ secrets.GITHUB_TOKEN }}" | docker login ghcr.io -u "${{ github.actor }}" --password-stdin
+            docker pull "${BACKEND_IMAGE}"
+            docker pull "${FRONTEND_IMAGE}"
+            docker network create "${NETWORK}" >/dev/null 2>&1 || true
+            docker volume create "${{ env.CONTAINER_BASENAME }}-postgres-data" >/dev/null
+            docker volume create "${{ env.CONTAINER_BASENAME }}-redis-data" >/dev/null
+
+            if ! docker container inspect "${CONTAINER_POSTGRES}" >/dev/null 2>&1; then
+              docker run -d --name "${CONTAINER_POSTGRES}" --network "${NETWORK}" \
+                --restart unless-stopped \
+                --env POSTGRES_USER="${POSTGRES_USER}" \
+                --env POSTGRES_PASSWORD="${POSTGRES_PASSWORD}" \
+                --env POSTGRES_DB="${POSTGRES_DB}" \
+                --mount type=volume,source=${{ env.CONTAINER_BASENAME }}-postgres-data,target=/var/lib/postgresql/data \
+                postgres:16-alpine
+            else
+              docker start "${CONTAINER_POSTGRES}" >/dev/null 2>&1 || true
+            fi
+
+            if ! docker container inspect "${CONTAINER_REDIS}" >/dev/null 2>&1; then
+              docker run -d --name "${CONTAINER_REDIS}" --network "${NETWORK}" \
+                --restart unless-stopped \
+                --mount type=volume,source=${{ env.CONTAINER_BASENAME }}-redis-data,target=/data \
+                redis:7-alpine
+            else
+              docker start "${CONTAINER_REDIS}" >/dev/null 2>&1 || true
+            fi
+
+            for i in $(seq 1 20); do
+              if docker exec "${CONTAINER_POSTGRES}" pg_isready -U "${POSTGRES_USER}" -d "${POSTGRES_DB}" >/dev/null 2>&1 && docker exec "${CONTAINER_REDIS}" redis-cli ping >/dev/null 2>&1; then
+                echo "Database and Redis are healthy"
+                break
+              fi
+              sleep 3
+            done
+
+            echo "Running incremental database migrations"
+            docker run --rm --network "${NETWORK}" \
+              --env DATABASE_URL="${DB_URL}" \
+              --env REDIS_URL="redis://${REDIS_HOST}:6379" \
+              --env JWT_SECRET="${JWT_SECRET}" \
+              --env ENCRYPTION_KEY="${ENCRYPTION_KEY}" \
+              "${BACKEND_IMAGE}" node dist/scripts/migrate.js
+
+            docker rm -f "${CONTAINER_NGINX}" >/dev/null 2>&1 || true
+            docker rm -f "${CONTAINER_FRONTEND}" >/dev/null 2>&1 || true
+            docker rm -f "${CONTAINER_BACKEND}" >/dev/null 2>&1 || true
+
+            docker run -d --name "${CONTAINER_BACKEND}" --network "${NETWORK}" \
+              --env DATABASE_URL="${DB_URL}" \
+              --env REDIS_URL="redis://${REDIS_HOST}:6379" \
+              --env JWT_SECRET="${JWT_SECRET}" \
+              --env ENCRYPTION_KEY="${ENCRYPTION_KEY}" \
+              --env PORT=4000 \
+              --env NODE_ENV=production \
+              --env CORS_ORIGIN="${CORS_ORIGIN:-http://localhost:3000}" \
+              --restart unless-stopped \
+              "${BACKEND_IMAGE}"
+
+            docker run -d --name "${CONTAINER_FRONTEND}" --network "${NETWORK}" \
+              --restart unless-stopped \
+              "${FRONTEND_IMAGE}"
+
+            mkdir -p /tmp/smarttrade-nginx
+            cat > /tmp/smarttrade-nginx/nginx.conf <<'EOF'
+            events { worker_connections 1024; }
+            http {
+              upstream backend { server ${CONTAINER_BACKEND}:4000; }
+              upstream frontend { server ${CONTAINER_FRONTEND}:80; }
+              server {
+                listen 80;
+                server_name _;
+
+                location /api/ {
+                  proxy_pass http://backend;
+                  proxy_http_version 1.1;
+                  proxy_set_header Host $host;
+                  proxy_set_header X-Real-IP $remote_addr;
+                  proxy_set_header X-Forwarded-For $proxy_add_x_forwarded_for;
+                }
+
+                location /ws {
+                  proxy_pass http://backend;
+                  proxy_http_version 1.1;
+                  proxy_set_header Upgrade $http_upgrade;
+                  proxy_set_header Connection "upgrade";
+                  proxy_set_header Host $host;
+                }
+
+                location / {
+                  proxy_pass http://frontend;
+                  proxy_set_header Host $host;
+                  try_files $uri $uri/ /index.html;
+                }
+              }
+            }
+            EOF
+
+            docker run -d --name "${CONTAINER_NGINX}" --network "${NETWORK}" \
+              -p 127.0.0.1:${DOCKER_HOST_PORT}:80 \
+              --mount type=bind,source=/tmp/smarttrade-nginx/nginx.conf,target=/etc/nginx/nginx.conf,readonly \
+              --restart unless-stopped \
+              nginx:alpine
+
+            for i in $(seq 1 20); do
+              if curl -fsS "http://127.0.0.1:${DOCKER_HOST_PORT}/health" >/dev/null 2>&1 || curl -fsS "http://127.0.0.1:${DOCKER_HOST_PORT}/api/health" >/dev/null 2>&1; then
+                echo "SmartTrade India deployment is healthy"
+                exit 0
+              fi
+              sleep 3
+            done
+
+            echo "SmartTrade India health check failed"
+            docker logs --tail 50 "${CONTAINER_BACKEND}" || true
+            docker logs --tail 50 "${CONTAINER_NGINX}" || true
+            exit 1

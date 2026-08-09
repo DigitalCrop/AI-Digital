@@ -1,0 +1,9 @@
+# Ignore backend dependencies
+node_modules/
+
+# Build output
+dist
+
+# Environment files
+.env
+.env.local
