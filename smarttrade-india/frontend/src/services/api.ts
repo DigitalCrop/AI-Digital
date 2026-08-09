@@ -1,7 +1,7 @@
 import axios from 'axios';
 import type { ApiResponse } from '@smarttrade/shared';
 
-const API_BASE = import.meta.env.VITE_API_URL ?? '/api';
+const API_BASE = import.meta.env.VITE_API_URL ?? '/smarttrade/api';
 
 export const api = axios.create({
   baseURL: API_BASE,
@@ -22,7 +22,7 @@ api.interceptors.response.use(
     if (error.response?.status === 401) {
       localStorage.removeItem('accessToken');
       localStorage.removeItem('refreshToken');
-      window.location.href = '/login';
+      window.location.href = '/smarttrade/login';
     }
     return Promise.reject(error);
   }

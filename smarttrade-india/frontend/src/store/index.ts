@@ -137,9 +137,7 @@ export const useWSStore = create<WSState>((set) => ({
 
   connect: (token) => {
     if (wsInstance?.readyState === WebSocket.OPEN) return;
-    const wsUrl = `${window.location.protocol === 'https:' ? 'wss:' : 'ws:'}//${window.location.host}/ws?token=${token}`;
-    wsInstance = new WebSocket(wsUrl);
-
+      const wsUrl = `${window.location.protocol === 'https:' ? 'wss:' : 'ws:'}//${window.location.host}/smarttrade/ws?token=${token}`;
     wsInstance.onopen = () => set({ connected: true });
     wsInstance.onclose = () => set({ connected: false });
     wsInstance.onmessage = (event) => {
