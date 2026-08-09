@@ -5,6 +5,8 @@ on:
     branches: [main]
     paths:
       - 'DayTracker/**'
+      - 'deploy/nginx.conf'
+      - '.dockerignore'
       - '.github/workflows/docker-build-deploy.yml'
   workflow_dispatch:
 
@@ -67,7 +69,7 @@ jobs:
       - name: Build and push Docker image
         uses: docker/build-push-action@v6
         with:
-          context: DayTracker
+          context: .
           file: DayTracker/Dockerfile
           push: true
           tags: |
@@ -87,17 +89,20 @@ jobs:
 
             IMAGE="${{ steps.meta.outputs.image_base }}:latest"
             CONTAINER_NAME="daytracker"
+            SHARED_NETWORK="ai-digital-network"
 
             # Authenticate to GHCR on the droplet (optional if image is public)
             echo "${{ secrets.GITHUB_TOKEN }}" | docker login ghcr.io -u "${{ github.actor }}" --password-stdin
 
             docker pull "${IMAGE}"
+            docker network create "${SHARED_NETWORK}" >/dev/null 2>&1 || true
 
             docker stop "${CONTAINER_NAME}" || true
             docker rm "${CONTAINER_NAME}" || true
 
             docker run -d \
               --name "${CONTAINER_NAME}" \
+              --network "${SHARED_NETWORK}" \
               -p 80:80 \
               --restart always \
               "${IMAGE}"

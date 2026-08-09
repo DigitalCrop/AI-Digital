@@ -1,0 +1,27 @@
+services:
+  timepass-caddy:
+    image: caddy:2-alpine
+    container_name: timepass-caddy
+    profiles: ["proxy"]
+    restart: unless-stopped
+    environment:
+      APP_DOMAIN: ${APP_DOMAIN:?Set APP_DOMAIN in .env}
+    ports:
+      - "80:80"
+      - "443:443"
+      - "443:443/udp"
+    volumes:
+      - ./deploy/Caddyfile:/etc/caddy/Caddyfile:ro
+      - timepass-caddy-data:/data
+      - timepass-caddy-config:/config
+    networks:
+      - timepass-network
+    depends_on:
+      timepass-app:
+        condition: service_healthy
+
+volumes:
+  timepass-caddy-data:
+    name: timepass-caddy-data
+  timepass-caddy-config:
+    name: timepass-caddy-config

@@ -1,0 +1,3 @@
+:3110 {
+  reverse_proxy timepass-app:3000
+}

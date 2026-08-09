@@ -1,0 +1,177 @@
+name: Docker Build & Deploy TimePass
+
+on:
+  push:
+    branches: [main]
+    paths:
+      - 'timePass/**'
+      - '.github/workflows/timepass-build-deploy.yml'
+  workflow_dispatch:
+
+concurrency:
+  group: timepass-production
+  cancel-in-progress: false
+
+env:
+  REGISTRY: ghcr.io
+  TIMEPASS_HOST: ${{ vars.TIMEPASS_HOST || '127.0.0.1' }}
+  TIMEPASS_PORT: ${{ vars.TIMEPASS_PORT || '3100' }}
+  TIMEPASS_CLIENT_URL: ${{ vars.TIMEPASS_CLIENT_URL }}
+  TIMEPASS_SESSION_SECRET: ${{ secrets.TIMEPASS_SESSION_SECRET }}
+
+jobs:
+  build-and-deploy:
+    runs-on: ubuntu-latest
+    permissions:
+      contents: read
+      packages: write
+
+    defaults:
+      run:
+        working-directory: timePass
+
+    steps:
+      - name: Checkout source code
+        uses: actions/checkout@v4
+
+      - name: Setup Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: '22'
+          cache: npm
+          cache-dependency-path: timePass/package-lock.json
+
+      - name: Install dependencies
+        run: npm ci
+
+      - name: Test, lint, and build
+        run: |
+          npm test
+          npm run lint
+          npm run build
+
+      - name: Set image metadata
+        id: meta
+        shell: bash
+        run: |
+          OWNER_LC=$(echo "${{ github.repository_owner }}" | tr '[:upper:]' '[:lower:]')
+          REPO_LC=$(echo "${{ github.event.repository.name }}" | tr '[:upper:]' '[:lower:]')
+          SHA_SHORT=$(echo "${{ github.sha }}" | cut -c1-7)
+          IMAGE_BASE="${{ env.REGISTRY }}/${OWNER_LC}/${REPO_LC}-timepass"
+          echo "image_base=${IMAGE_BASE}" >> "$GITHUB_OUTPUT"
+          echo "sha_short=${SHA_SHORT}" >> "$GITHUB_OUTPUT"
+        working-directory: .
+
+      - name: Log in to GitHub Container Registry
+        uses: docker/login-action@v3
+        with:
+          registry: ${{ env.REGISTRY }}
+          username: ${{ github.actor }}
+          password: ${{ secrets.GITHUB_TOKEN }}
+
+      - name: Set up Docker Buildx
+        uses: docker/setup-buildx-action@v3
+
+      - name: Build and push TimePass image
+        uses: docker/build-push-action@v6
+        with:
+          context: timePass
+          file: timePass/Dockerfile
+          push: true
+          tags: |
+            ${{ steps.meta.outputs.image_base }}:latest
+            ${{ steps.meta.outputs.image_base }}:${{ steps.meta.outputs.sha_short }}
+          cache-from: type=gha,scope=timepass
+          cache-to: type=gha,mode=max,scope=timepass
+
+      - name: Deploy only TimePass to DigitalOcean
+        uses: appleboy/ssh-action@v1.2.0
+        env:
+          TIMEPASS_CLIENT_URL: ${{ env.TIMEPASS_CLIENT_URL }}
+          TIMEPASS_HOST: ${{ env.TIMEPASS_HOST }}
+          TIMEPASS_SESSION_SECRET: ${{ env.TIMEPASS_SESSION_SECRET }}
+          TIMEPASS_PORT: ${{ env.TIMEPASS_PORT }}
+        with:
+          host: ${{ secrets.DO_HOST }}
+          username: ${{ secrets.DO_USERNAME }}
+          key: ${{ secrets.DO_SSH_KEY }}
+          passphrase: ${{ secrets.DO_SSH_PASSPHRASE }}
+          envs: TIMEPASS_CLIENT_URL,TIMEPASS_HOST,TIMEPASS_SESSION_SECRET,TIMEPASS_PORT
+          script: |
+            set -eu
+
+            IMAGE="${{ steps.meta.outputs.image_base }}:${{ steps.meta.outputs.sha_short }}"
+            CONTAINER_NAME="timepass-app"
+            PREVIOUS_NAME="timepass-app-previous"
+            VOLUME_NAME="timepass-data"
+            SHARED_NETWORK="ai-digital-network"
+
+            if [ -z "${TIMEPASS_CLIENT_URL:-}" ]; then
+              echo "TIMEPASS_CLIENT_URL repository variable is required"
+              exit 1
+            fi
+            if [ -z "${TIMEPASS_SESSION_SECRET:-}" ]; then
+              echo "TIMEPASS_SESSION_SECRET repository secret is required"
+              exit 1
+            fi
+
+            echo "${{ secrets.GITHUB_TOKEN }}" | docker login ghcr.io -u "${{ github.actor }}" --password-stdin
+            docker pull "$IMAGE"
+            docker volume create "$VOLUME_NAME" >/dev/null
+            docker network create "$SHARED_NETWORK" >/dev/null 2>&1 || true
+
+            # Keep the previous TimePass container available for rollback. No
+            # DayTracker container, image, network, port, or volume is changed.
+            docker rm -f "$PREVIOUS_NAME" >/dev/null 2>&1 || true
+            if docker container inspect "$CONTAINER_NAME" >/dev/null 2>&1; then
+              docker stop "$CONTAINER_NAME"
+              docker rename "$CONTAINER_NAME" "$PREVIOUS_NAME"
+            fi
+
+            if ! docker run -d \
+              --name "$CONTAINER_NAME" \
+              --restart unless-stopped \
+              --network "$SHARED_NETWORK" \
+              --mount "type=volume,source=${VOLUME_NAME},target=/app/data" \
+              --publish "${TIMEPASS_HOST}:${TIMEPASS_PORT}:3000" \
+              --env NODE_ENV=production \
+              --env PORT=3000 \
+              --env DATABASE_URL=file:/app/data/timepass.db \
+              --env CLIENT_URL="$TIMEPASS_CLIENT_URL" \
+              --env SESSION_SECRET="$TIMEPASS_SESSION_SECRET" \
+              --env ROOM_EXPIRY_MINUTES=120 \
+              --env RECONNECT_GRACE_SECONDS=60 \
+              "$IMAGE"; then
+              echo "TimePass container could not start; restoring its previous container"
+              docker rm -f "$CONTAINER_NAME" >/dev/null 2>&1 || true
+              if docker container inspect "$PREVIOUS_NAME" >/dev/null 2>&1; then
+                docker rename "$PREVIOUS_NAME" "$CONTAINER_NAME"
+                docker start "$CONTAINER_NAME"
+              fi
+              exit 1
+            fi
+
+            healthy=false
+            for attempt in $(seq 1 20); do
+              if curl -fsS "http://127.0.0.1:${TIMEPASS_PORT}/timpass/api/health" >/dev/null 2>&1; then
+                healthy=true
+                break
+              fi
+              sleep 3
+            done
+
+            if [ "$healthy" = true ]; then
+              docker rm "$PREVIOUS_NAME" >/dev/null 2>&1 || true
+              docker ps --filter "name=^/${CONTAINER_NAME}$"
+              echo "TimePass deployment is healthy"
+              exit 0
+            fi
+
+            echo "TimePass health check failed; restoring its previous container"
+            docker logs --tail 100 "$CONTAINER_NAME" || true
+            docker rm -f "$CONTAINER_NAME" || true
+            if docker container inspect "$PREVIOUS_NAME" >/dev/null 2>&1; then
+              docker rename "$PREVIOUS_NAME" "$CONTAINER_NAME"
+              docker start "$CONTAINER_NAME"
+            fi
+            exit 1

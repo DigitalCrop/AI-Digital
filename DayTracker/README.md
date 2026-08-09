@@ -147,26 +147,26 @@ DayTracker is a **Vite** React SPA. Production assets land in `dist/` and are se
 ### Build & run locally
 
 ```bash
-# From the DayTracker directory
-docker build -t daytracker .
+# From the repository root (the image uses deploy/nginx.conf)
+docker build -f DayTracker/Dockerfile -t daytracker .
 
 # Map host 8080 → container 80
 docker run --rm -p 8080:80 daytracker
 ```
 
-Open [http://localhost:8080](http://localhost:8080). Confirm:
+Open [http://localhost:8080/daytracker/](http://localhost:8080/daytracker/). Confirm:
 
 1. The dashboard loads and sample tasks appear.
-2. Hard-refresh still works (SPA routing via `nginx.conf` `try_files`).
-3. Health endpoint: [http://localhost:8080/health](http://localhost:8080/health) returns `ok`.
+2. Hard-refresh still works (SPA routing via `../deploy/nginx.conf` `try_files`).
+3. [http://localhost:8080/daytracker/](http://localhost:8080/daytracker/) returns successfully.
 
 Stop with `Ctrl+C` (or omit `--rm` and use `docker stop <id>`).
 
 Files:
 
 - `Dockerfile` — Node 22 Alpine build → Nginx Alpine serve
-- `nginx.conf` — SPA fallback + `/health` + gzip
-- `.dockerignore` — keeps `node_modules` / `dist` out of the build context
+- `../deploy/nginx.conf` — shared gateway routing, SPA fallback, proxying, and gzip
+- `../.dockerignore` — keeps unrelated sources and build output out of the root build context
 
 ## CI/CD (GitHub Actions → GHCR → DigitalOcean)
 
@@ -225,7 +225,7 @@ IMAGE=ghcr.io/digitalcrop/ai-digital:latest ./deploy.sh
 IMAGE=ghcr.io/digitalcrop/ai-digital:a1b2c3d ./deploy.sh
 ```
 
-The script pulls the image, stops/removes the old `daytracker` container, starts a new one on port 80 with `--restart always`, then curls `/health`.
+The script pulls the image, stops/removes the old `daytracker` container, starts a new one on port 80 in `ai-digital-network`, then checks `/daytracker/`.
 
 ## DigitalOcean server preparation
 
@@ -264,12 +264,14 @@ cd ~/apps/daytracker
 
 ```bash
 docker pull ghcr.io/digitalcrop/ai-digital:latest
+docker network create ai-digital-network || true
 
 docker stop daytracker || true
 docker rm daytracker || true
 
 docker run -d \
   --name daytracker \
+  --network ai-digital-network \
   -p 80:80 \
   --restart always \
   ghcr.io/digitalcrop/ai-digital:latest
@@ -282,7 +284,7 @@ Or: `IMAGE=ghcr.io/digitalcrop/ai-digital:latest ./deploy.sh`
 ```bash
 docker ps
 docker logs daytracker
-curl http://127.0.0.1/health
+curl http://127.0.0.1/daytracker/
 ```
 
 `--restart always` keeps the container running after droplet reboots.
@@ -291,7 +293,7 @@ curl http://127.0.0.1/health
 
 | Improvement | Why |
 |-------------|-----|
-| **Docker `HEALTHCHECK`** | Already in the `Dockerfile` (`/health`). Wire it to your orchestrator or `docker ps` status. |
+| **Docker `HEALTHCHECK`** | Already in the `Dockerfile` (`/daytracker/`). Wire it to your orchestrator or `docker ps` status. |
 | **Versioned tags** | Pipeline pushes `:latest` **and** `:<short-sha>`. Prefer deploying by SHA for auditability. |
 | **Rollback** | Re-run `deploy.sh` with the previous SHA tag, e.g. `IMAGE=ghcr.io/.../ai-digital:abc1234 ./deploy.sh`. |
 | **Nginx reverse proxy** | Put host Nginx/Caddy in front of the container (or map to `127.0.0.1:8080`) for multiple apps on one droplet. |

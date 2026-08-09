@@ -1,0 +1,39 @@
+name: timepass
+services:
+  timepass-app:
+    container_name: timepass-app
+    build:
+      context: .
+      dockerfile: Dockerfile
+    restart: unless-stopped
+    env_file:
+      - path: .env
+        required: false
+    environment:
+      NODE_ENV: production
+      PORT: 3000
+      DATABASE_URL: file:/app/data/timepass.db
+      CLIENT_URL: ${CLIENT_URL:-http://127.0.0.1:3100/timpass}
+      ROOM_EXPIRY_MINUTES: ${ROOM_EXPIRY_MINUTES:-120}
+      RECONNECT_GRACE_SECONDS: ${RECONNECT_GRACE_SECONDS:-60}
+      SESSION_SECRET: ${SESSION_SECRET:-local-development-secret-change-in-production}
+    ports:
+      - "${TIMEPASS_HOST:-127.0.0.1}:${TIMEPASS_PORT:-3100}:3000"
+    volumes:
+      - timepass-data:/app/data
+    networks:
+      - timepass-network
+    healthcheck:
+      test: ["CMD", "wget", "-qO-", "http://127.0.0.1:3000/timpass/api/health"]
+      interval: 30s
+      timeout: 5s
+      retries: 3
+      start_period: 15s
+
+networks:
+  timepass-network:
+    name: ai-digital-network
+
+volumes:
+  timepass-data:
+    name: timepass-data
