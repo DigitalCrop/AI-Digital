@@ -57,7 +57,7 @@ sudo ss -ltnp
 cp .env.example .env
 docker compose -p timepass up -d --build
 docker compose -p timepass ps
-curl http://127.0.0.1:3100/timpass/api/health
+curl http://127.0.0.1:3100/timepass/api/health
 ```
 
 Only the `timepass` Compose project is started. The host mapping defaults to `127.0.0.1:3100`; change `TIMEPASS_HOST` or `TIMEPASS_PORT` in `.env` if needed. The app listens on port 3000 only inside its container. SQLite lives in the named `timepass-data` volume at `/app/data/timepass.db`.

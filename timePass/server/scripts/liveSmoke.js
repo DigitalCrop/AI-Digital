@@ -3,7 +3,7 @@ import { EVENTS } from '@timepass/shared';
 
 const url = process.env.SMOKE_URL || 'http://host.docker.internal:3100';
 const connect = () => new Promise((resolve, reject) => {
-  const client = io(url, { path: '/timpass/socket.io', transports: ['websocket'], forceNew: true, reconnection: false });
+  const client = io(url, { path: '/timepass/socket.io', transports: ['websocket'], forceNew: true, reconnection: false });
   client.once('connect', () => resolve(client));
   client.once('connect_error', reject);
 });
