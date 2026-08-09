@@ -36,9 +36,9 @@ export function formatShortDate(dateStr) {
 
 export function getGreeting(date = new Date()) {
   const hour = date.getHours();
-  if (hour < 12) return 'Good Morning Guys';
-  if (hour < 17) return 'Good Afternoon Guys';
-  return 'Good Evening';
+  if (hour < 12) return 'Good Morning Friends';
+  if (hour < 17) return 'Good Afternoon Friends';
+  return 'Good Evening  Friends';
 }
 
 export function isPastDate(dateStr) {
