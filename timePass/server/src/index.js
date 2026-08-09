@@ -9,7 +9,7 @@ import { registerSocketHandlers } from './socket.js';
 
 const app = createApp();
 const server = http.createServer(app);
-const io = new Server(server, { cors: config.isProduction ? undefined : { origin: config.clientUrl, methods: ['GET','POST'] }, maxHttpBufferSize: 16_384, pingTimeout: 20_000 });
+const io = new Server(server, { path: '/timpass/socket.io', cors: config.isProduction ? undefined : { origin: config.clientUrl, methods: ['GET','POST'] }, maxHttpBufferSize: 16_384, pingTimeout: 20_000 });
 const manager = new RoomManager({ repository, reconnectGraceMs: config.reconnectGraceMs, roomExpiryMs: config.roomExpiryMs, sessionSecret: config.sessionSecret });
 registerSocketHandlers(io, manager, config.clientUrl);
 const cleanupTimer = setInterval(() => manager.cleanup(), 10_000); cleanupTimer.unref();
