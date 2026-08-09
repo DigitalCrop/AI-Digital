@@ -14,7 +14,7 @@ const appBasePath = '/timepass';
 export function createApp({ databaseCheck = checkDatabase } = {}) {
   const app = express();
   app.disable('x-powered-by');
-  app.use(helmet({ contentSecurityPolicy: { directives: { defaultSrc: ["'self'"], scriptSrc: ["'self'"], styleSrc: ["'self'", "'unsafe-inline'"], imgSrc: ["'self'", 'data:'], connectSrc: ["'self'", 'ws:', 'wss:'] } } }));
+  app.use(helmet({ contentSecurityPolicy: { directives: { defaultSrc: ["'self'"], scriptSrc: ["'self'"], styleSrc: ["'self'", "'unsafe-inline'"], imgSrc: ["'self'", 'data:'], connectSrc: ["'self'", 'ws:', 'wss:'], upgradeInsecureRequests: null } } }));
   app.use(compression());
   app.use(express.json({ limit: '16kb' }));
   app.use(`${appBasePath}/api`, rateLimit({ windowMs: 60_000, limit: 120, standardHeaders: 'draft-8', legacyHeaders: false }));
