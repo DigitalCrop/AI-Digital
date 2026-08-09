@@ -109,15 +109,30 @@ jobs:
             PREVIOUS_NAME="timepass-app-previous"
             VOLUME_NAME="timepass-data"
             SHARED_NETWORK="ai-digital-network"
+            SECRET_DIR="${HOME}/.config/timepass"
+            SECRET_FILE="${SECRET_DIR}/session-secret"
 
             if [ -z "${TIMEPASS_CLIENT_URL:-}" ]; then
               echo "Could not resolve the TimePass public URL from TIMEPASS_CLIENT_URL or DO_HOST"
               exit 1
             fi
-            if [ -z "${TIMEPASS_SESSION_SECRET:-}" ]; then
-              echo "TIMEPASS_SESSION_SECRET repository secret is required"
-              exit 1
+            umask 077
+            mkdir -p "$SECRET_DIR"
+            chmod 700 "$SECRET_DIR"
+            if [ -n "${TIMEPASS_SESSION_SECRET:-}" ]; then
+              SESSION_SECRET_VALUE="$TIMEPASS_SESSION_SECRET"
+              printf '%s' "$SESSION_SECRET_VALUE" > "$SECRET_FILE"
+            elif [ -s "$SECRET_FILE" ]; then
+              SESSION_SECRET_VALUE=$(cat "$SECRET_FILE")
+            else
+              if command -v openssl >/dev/null 2>&1; then
+                SESSION_SECRET_VALUE=$(openssl rand -hex 48)
+              else
+                SESSION_SECRET_VALUE=$(od -An -N48 -tx1 /dev/urandom | tr -d ' \n')
+              fi
+              printf '%s' "$SESSION_SECRET_VALUE" > "$SECRET_FILE"
             fi
+            chmod 600 "$SECRET_FILE"
 
             echo "${{ secrets.GITHUB_TOKEN }}" | docker login ghcr.io -u "${{ github.actor }}" --password-stdin
             docker pull "$IMAGE"
@@ -142,7 +157,7 @@ jobs:
               --env PORT=3000 \
               --env DATABASE_URL=file:/app/data/timepass.db \
               --env CLIENT_URL="$TIMEPASS_CLIENT_URL" \
-              --env SESSION_SECRET="$TIMEPASS_SESSION_SECRET" \
+              --env SESSION_SECRET="$SESSION_SECRET_VALUE" \
               --env ROOM_EXPIRY_MINUTES=120 \
               --env RECONNECT_GRACE_SECONDS=60 \
               "$IMAGE"; then
