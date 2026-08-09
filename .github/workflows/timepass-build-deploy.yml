@@ -16,7 +16,7 @@ env:
   REGISTRY: ghcr.io
   TIMEPASS_HOST: ${{ vars.TIMEPASS_HOST || '127.0.0.1' }}
   TIMEPASS_PORT: ${{ vars.TIMEPASS_PORT || '3100' }}
-  TIMEPASS_CLIENT_URL: ${{ vars.TIMEPASS_CLIENT_URL || format('http://{0}/timpass', secrets.DO_HOST) }}
+  TIMEPASS_CLIENT_URL: ${{ vars.TIMEPASS_CLIENT_URL || format('http://{0}/timepass', secrets.DO_HOST) }}
   TIMEPASS_SESSION_SECRET: ${{ secrets.TIMEPASS_SESSION_SECRET }}
 
 jobs:
@@ -172,7 +172,7 @@ jobs:
 
             healthy=false
             for attempt in $(seq 1 20); do
-              if curl -fsS "http://127.0.0.1:${TIMEPASS_PORT}/timpass/api/health" >/dev/null 2>&1; then
+              if curl -fsS "http://127.0.0.1:${TIMEPASS_PORT}/timepass/api/health" >/dev/null 2>&1; then
                 healthy=true
                 break
               fi

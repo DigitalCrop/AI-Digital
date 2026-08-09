@@ -9,7 +9,7 @@ import { checkDatabase } from './db.js';
 
 const here = path.dirname(fileURLToPath(import.meta.url));
 const clientDist = path.resolve(here, '../../client/dist');
-const appBasePath = '/timpass';
+const appBasePath = '/timepass';
 
 export function createApp({ databaseCheck = checkDatabase } = {}) {
   const app = express();

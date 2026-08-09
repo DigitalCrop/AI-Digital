@@ -4,11 +4,11 @@ This runbook assumes an Ubuntu Droplet that may already host other Docker projec
 
 ## GitHub Actions setup
 
-The separate `.github/workflows/timepass-build-deploy.yml` workflow runs only for TimePass changes. Before running it, add repository secrets `DO_HOST`, `DO_USERNAME`, `DO_SSH_KEY`, and optional `DO_SSH_PASSPHRASE`. `TIMEPASS_SESSION_SECRET` is optional: when omitted, the first deployment generates a strong value in `~/.config/timepass/session-secret` on the Droplet and later deployments reuse it. Supplying the GitHub secret overrides and persists that value. The optional repository variable `TIMEPASS_CLIENT_URL` overrides the public URL; when omitted, it defaults to `http://DO_HOST/timpass`. Set it to `https://YOUR_DOMAIN/timpass`, without a trailing slash, when TLS and a domain are configured. Optional variables `TIMEPASS_HOST` and `TIMEPASS_PORT` default to `127.0.0.1` and `3100`.
+The separate `.github/workflows/timepass-build-deploy.yml` workflow runs only for TimePass changes. Before running it, add repository secrets `DO_HOST`, `DO_USERNAME`, `DO_SSH_KEY`, and optional `DO_SSH_PASSPHRASE`. `TIMEPASS_SESSION_SECRET` is optional: when omitted, the first deployment generates a strong value in `~/.config/timepass/session-secret` on the Droplet and later deployments reuse it. Supplying the GitHub secret overrides and persists that value. The optional repository variable `TIMEPASS_CLIENT_URL` overrides the public URL; when omitted, it defaults to `http://DO_HOST/timepass`. Set it to `https://YOUR_DOMAIN/timepass`, without a trailing slash, when TLS and a domain are configured. Optional variables `TIMEPASS_HOST` and `TIMEPASS_PORT` default to `127.0.0.1` and `3100`.
 
-The workflow publishes a distinct `<repository>-timepass` image and manages only the `timepass-app` container and `timepass-data` volume. Both application containers join `ai-digital-network`; DayTracker's Nginx remains the only service on port 80 and forwards `/timpass/` to TimePass. The TimePass workflow also keeps `127.0.0.1:3100` for private health checks and rolls back only TimePass if a release is unhealthy.
+The workflow publishes a distinct `<repository>-timepass` image and manages only the `timepass-app` container and `timepass-data` volume. Both application containers join `ai-digital-network`; DayTracker's Nginx remains the only service on port 80 and forwards `/timepass/` to TimePass. The TimePass workflow also keeps `127.0.0.1:3100` for private health checks and rolls back only TimePass if a release is unhealthy.
 
-Push both the DayTracker Nginx/workflow changes and the TimePass changes for the first deployment. The resulting public URLs are `/daytracker/` and `/timpass/` on the same IP or domain. Keep port 3100 private; it does not need a DigitalOcean or UFW inbound rule.
+Push both the DayTracker Nginx/workflow changes and the TimePass changes for the first deployment. The resulting public URLs are `/daytracker/` and `/timepass/` on the same IP or domain. Keep port 3100 private; it does not need a DigitalOcean or UFW inbound rule.
 
 ## 1. Prepare the Droplet
 
@@ -69,7 +69,7 @@ TIMEPASS_HOST=127.0.0.1
 TIMEPASS_PORT=3100
 DATABASE_URL=file:/app/data/timepass.db
 APP_DOMAIN=timepass.example.com
-CLIENT_URL=https://example.com/timpass
+CLIENT_URL=https://example.com/timepass
 ROOM_EXPIRY_MINUTES=120
 RECONNECT_GRACE_SECONDS=60
 SESSION_SECRET=PASTE_OUTPUT_FROM_OPENSSL_RAND_BASE64_48
@@ -85,7 +85,7 @@ docker compose -p timepass up -d --build
 docker compose -p timepass exec timepass-app npm run db:migrate
 docker compose -p timepass ps
 docker compose -p timepass logs --tail=100 timepass-app
-curl --fail http://127.0.0.1:3100/timpass/api/health
+curl --fail http://127.0.0.1:3100/timepass/api/health
 ```
 
 Startup already runs safe, idempotent deployed migrations; the explicit command verifies them. The expected health response includes `"status":"ok"` and `"database":"ok"`.
@@ -132,7 +132,7 @@ Create `timepass.example.com` DNS records at your DNS provider. Verify resolutio
 ```bash
 dig +short timepass.example.com
 curl -I https://timepass.example.com
-curl --fail https://example.com/timpass/api/health
+curl --fail https://example.com/timepass/api/health
 docker compose -p timepass logs --tail=100 timepass-app
 ```
 
@@ -148,7 +148,7 @@ git pull --ff-only
 docker compose -p timepass up -d --build
 docker compose -p timepass exec timepass-app npm run db:migrate
 docker compose -p timepass ps
-curl --fail http://127.0.0.1:3100/timpass/api/health
+curl --fail http://127.0.0.1:3100/timepass/api/health
 ```
 
 This recreates only `timepass-app`. Do not use global prune commands.
@@ -170,7 +170,7 @@ Restore only during an announced maintenance window. Inspect the archive and kee
 docker compose -p timepass stop timepass-app
 docker run --rm -v timepass-data:/restore -v /opt/timepass/backups:/backup alpine sh -c 'cd /restore && tar xzf /backup/CHOSEN_BACKUP.tgz'
 docker compose -p timepass start timepass-app
-curl --fail http://127.0.0.1:3100/timpass/api/health
+curl --fail http://127.0.0.1:3100/timepass/api/health
 ```
 
 The restore command overwrites matching database files in `timepass-data`; double-check `CHOSEN_BACKUP.tgz` first.
