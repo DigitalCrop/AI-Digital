@@ -103,7 +103,7 @@ jobs:
           cache-from: type=gha,scope=smarttrade-india-frontend
           cache-to: type=gha,mode=max,scope=smarttrade-india-frontend
 
-      - name: Debug: verify secrets available to workflow
+      - name: 'Debug: verify secrets available to workflow'
         if: ${{ always() }}
         run: |
           set -euo pipefail
