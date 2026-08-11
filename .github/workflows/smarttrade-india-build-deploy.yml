@@ -199,7 +199,7 @@ jobs:
               --env REDIS_URL="redis://${REDIS_HOST}:6379" \
               --env JWT_SECRET="${JWT_SECRET}" \
               --env ENCRYPTION_KEY="${ENCRYPTION_KEY}" \
-              "${BACKEND_IMAGE}" node dist/scripts/migrate.js
+              "${BACKEND_IMAGE}" node backend/dist/scripts/migrate.js
 
             docker rm -f "${CONTAINER_NGINX}" >/dev/null 2>&1 || true
             docker rm -f "${CONTAINER_FRONTEND}" >/dev/null 2>&1 || true
