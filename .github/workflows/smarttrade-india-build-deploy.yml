@@ -148,8 +148,8 @@ jobs:
             POSTGRES_USER="${{ env.POSTGRES_USER }}"
             POSTGRES_PASSWORD="${{ env.POSTGRES_PASSWORD }}"
             POSTGRES_DB="${{ env.POSTGRES_DB }}"
-            POSTGRES_HOST=postgres
-            REDIS_HOST=redis
+            POSTGRES_HOST="${CONTAINER_POSTGRES}"
+            REDIS_HOST="${CONTAINER_REDIS}"
             DB_URL="postgresql://${POSTGRES_USER}:${POSTGRES_PASSWORD}@${POSTGRES_HOST}:5432/${POSTGRES_DB}"
 
             if [ -z "${JWT_SECRET:-}" ] || [ -z "${ENCRYPTION_KEY:-}" ]; then
