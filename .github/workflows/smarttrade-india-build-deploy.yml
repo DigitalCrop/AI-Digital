@@ -103,8 +103,30 @@ jobs:
           cache-from: type=gha,scope=smarttrade-india-frontend
           cache-to: type=gha,mode=max,scope=smarttrade-india-frontend
 
+      - name: Debug: verify secrets available to workflow
+        if: ${{ always() }}
+        run: |
+          set -euo pipefail
+          if [ -z "${{ secrets.JWT_SECRET }}" ]; then
+            echo "DEBUG: JWT_SECRET is NOT set in GitHub Actions secrets"
+          else
+            echo "DEBUG: JWT_SECRET is set"
+          fi
+          if [ -z "${{ secrets.ENCRYPTION_KEY }}" ]; then
+            echo "DEBUG: ENCRYPTION_KEY is NOT set in GitHub Actions secrets"
+          else
+            echo "DEBUG: ENCRYPTION_KEY is set"
+          fi
+        shell: bash
+
       - name: Deploy to DigitalOcean via SSH
         uses: appleboy/ssh-action@v1.2.0
+        env:
+          DATABASE_URL: ${{ secrets.DATABASE_URL }}
+          REDIS_URL: ${{ secrets.REDIS_URL }}
+          JWT_SECRET: ${{ secrets.JWT_SECRET }}
+          ENCRYPTION_KEY: ${{ secrets.ENCRYPTION_KEY }}
+          CORS_ORIGIN: ${{ secrets.CORS_ORIGIN }}
         with:
           host: ${{ secrets.DO_HOST }}
           username: ${{ secrets.DO_USERNAME }}
