@@ -87,12 +87,15 @@ jobs:
           script: |
             set -euo pipefail
 
-            IMAGE="${{ steps.meta.outputs.image_base }}:latest"
+            IMAGE_BASE='${{ steps.meta.outputs.image_base }}'
+            IMAGE="${IMAGE_BASE}:latest"
             CONTAINER_NAME="daytracker"
             SHARED_NETWORK="ai-digital-network"
+            GITHUB_TOKEN='${{ secrets.GITHUB_TOKEN }}'
+            GITHUB_ACTOR='${{ github.actor }}'
 
             # Authenticate to GHCR on the droplet (optional if image is public)
-            echo "${{ secrets.GITHUB_TOKEN }}" | docker login ghcr.io -u "${{ github.actor }}" --password-stdin
+            printf '%s' "$GITHUB_TOKEN" | docker login ghcr.io -u "$GITHUB_ACTOR" --password-stdin
 
             docker pull "${IMAGE}"
             docker network create "${SHARED_NETWORK}" >/dev/null 2>&1 || true
