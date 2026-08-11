@@ -222,7 +222,7 @@ jobs:
               "${FRONTEND_IMAGE}"
 
             mkdir -p /tmp/smarttrade-nginx
-            cat > /tmp/smarttrade-nginx/nginx.conf <<'EOF'
+            cat > /tmp/smarttrade-nginx/nginx.conf <<EOF
             events { worker_connections 1024; }
             http {
               upstream backend { server ${CONTAINER_BACKEND}:4000; }
