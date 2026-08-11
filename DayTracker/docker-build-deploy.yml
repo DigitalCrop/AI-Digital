@@ -111,7 +111,7 @@ jobs:
 
             # Health check
             for i in $(seq 1 12); do
-              if curl -fsS http://127.0.0.1/daytracker/health >/dev/null 2>&1; then
+              if curl -fsS http://127.0.0.1/daytracker/ >/dev/null 2>&1; then
                 echo "Deploy healthy"
                 docker ps --filter "name=${CONTAINER_NAME}"
                 exit 0
