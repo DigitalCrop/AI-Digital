@@ -124,6 +124,7 @@ jobs:
         env:
           DATABASE_URL: ${{ secrets.DATABASE_URL }}
           REDIS_URL: ${{ secrets.REDIS_URL }}
+          DOCKER_HOST_PORT: ${{ env.DOCKER_HOST_PORT }}
           JWT_SECRET: ${{ secrets.JWT_SECRET }}
           ENCRYPTION_KEY: ${{ secrets.ENCRYPTION_KEY }}
           CORS_ORIGIN: ${{ secrets.CORS_ORIGIN }}
@@ -132,7 +133,7 @@ jobs:
           username: ${{ secrets.DO_USERNAME }}
           key: ${{ secrets.DO_SSH_KEY }}
           passphrase: ${{ secrets.DO_SSH_PASSPHRASE }}
-          envs: DATABASE_URL,REDIS_URL,JWT_SECRET,ENCRYPTION_KEY,CORS_ORIGIN
+          envs: DATABASE_URL,REDIS_URL,DOCKER_HOST_PORT,JWT_SECRET,ENCRYPTION_KEY,CORS_ORIGIN
           script: |
             set -euo pipefail
 
