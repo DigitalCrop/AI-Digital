@@ -158,7 +158,9 @@ jobs:
               exit 1
             fi
 
-            echo "${{ secrets.GITHUB_TOKEN }}" | docker login ghcr.io -u "${{ github.actor }}" --password-stdin
+            GITHUB_TOKEN='${{ secrets.GITHUB_TOKEN }}'
+            GITHUB_ACTOR='${{ github.actor }}'
+            printf '%s' "$GITHUB_TOKEN" | docker login ghcr.io -u "$GITHUB_ACTOR" --password-stdin
             docker pull "${BACKEND_IMAGE}"
             docker pull "${FRONTEND_IMAGE}"
             docker network create "${NETWORK}" >/dev/null 2>&1 || true
