@@ -224,7 +224,7 @@ jobs:
               "${FRONTEND_IMAGE}"
 
             mkdir -p /tmp/smarttrade-nginx
-            cat > /tmp/smarttrade-nginx/nginx.conf <<'EOF'
+            cat > /tmp/smarttrade-nginx/nginx.conf <<EOF
             events { worker_connections 1024; }
             http {
               upstream backend { server ${CONTAINER_BACKEND}:4000; }
@@ -246,7 +246,9 @@ jobs:
                 }
 
                 location /smarttrade/api/ {
-                  rewrite ^/smarttrade/api/(.*)$ /api/$1 break;
+                  rewrite ^/smarttrade/api/(.*)$ /api/\$1 break;
+                  rewrite ^/smarttrade/ws(.*)$ /ws\$1 break;
+                  rewrite ^/smarttrade/(.*)$ /\$1 break;
                   proxy_pass http://backend;
                   proxy_http_version 1.1;
                   proxy_set_header Host \$host;
