@@ -223,6 +223,23 @@ jobs:
               --restart unless-stopped \
               "${FRONTEND_IMAGE}"
 
+            frontend_healthy=false
+            for i in $(seq 1 20); do
+              if [ "$(docker inspect --format '{{.State.Running}}' "${CONTAINER_FRONTEND}" 2>/dev/null || true)" = "true" ] && \
+                 docker exec "${CONTAINER_FRONTEND}" wget -qO- http://127.0.0.1/ >/dev/null 2>&1; then
+                frontend_healthy=true
+                break
+              fi
+              sleep 2
+            done
+
+            if [ "${frontend_healthy}" != "true" ]; then
+              echo "SmartTrade frontend failed to start"
+              docker inspect "${CONTAINER_FRONTEND}" --format '{{json .State}}' || true
+              docker logs --tail 100 "${CONTAINER_FRONTEND}" || true
+              exit 1
+            fi
+
             mkdir -p /tmp/smarttrade-nginx
             cat > /tmp/smarttrade-nginx/nginx.conf <<EOF
             events { worker_connections 1024; }
@@ -310,5 +327,6 @@ jobs:
 
             echo "SmartTrade India health check failed"
             docker logs --tail 50 "${CONTAINER_BACKEND}" || true
+            docker logs --tail 50 "${CONTAINER_FRONTEND}" || true
             docker logs --tail 50 "${CONTAINER_NGINX}" || true
             exit 1
