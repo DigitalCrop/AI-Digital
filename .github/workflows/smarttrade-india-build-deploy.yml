@@ -245,6 +245,15 @@ jobs:
                   return 301 /smarttrade/;
                 }
 
+                location = /smarttrade/health {
+                  rewrite ^/smarttrade/health$ /health break;
+                  proxy_pass http://backend;
+                  proxy_http_version 1.1;
+                  proxy_set_header Host \$host;
+                  proxy_set_header X-Real-IP \$remote_addr;
+                  proxy_set_header X-Forwarded-For \$proxy_add_x_forwarded_for;
+                }
+
                 location /smarttrade/api/ {
                   rewrite ^/smarttrade/api/(.*)$ /api/\$1 break;
                   rewrite ^/smarttrade/ws(.*)$ /ws\$1 break;
@@ -257,7 +266,7 @@ jobs:
                 }
 
                 location /smarttrade/ws {
-                  rewrite ^/smarttrade/ws(.*)$ /ws$1 break;
+                  rewrite ^/smarttrade/ws(.*)$ /ws\$1 break;
                   proxy_pass http://backend;
                   proxy_http_version 1.1;
                   proxy_set_header Upgrade \$http_upgrade;
@@ -266,7 +275,7 @@ jobs:
                 }
 
                 location /smarttrade/ {
-                  rewrite ^/smarttrade/(.*)$ /$1 break;
+                  rewrite ^/smarttrade/(.*)$ /\$1 break;
                   proxy_pass http://frontend;
                   proxy_http_version 1.1;
                   proxy_set_header Host \$host;
@@ -290,7 +299,9 @@ jobs:
               nginx:alpine
 
             for i in $(seq 1 20); do
-              if curl -fsS "http://127.0.0.1:${DOCKER_HOST_PORT}/health" >/dev/null 2>&1 || curl -fsS "http://127.0.0.1:${DOCKER_HOST_PORT}/api/health" >/dev/null 2>&1; then
+              if curl -fsS "http://127.0.0.1:${DOCKER_HOST_PORT}/smarttrade/health" >/dev/null 2>&1 && \
+                 curl -fsS "http://127.0.0.1:${DOCKER_HOST_PORT}/smarttrade/" >/dev/null 2>&1 && \
+                 curl -fsS "http://127.0.0.1:${DOCKER_HOST_PORT}/smarttrade/login" >/dev/null 2>&1; then
                 echo "SmartTrade India deployment is healthy"
                 exit 0
               fi
