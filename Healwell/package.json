@@ -1,0 +1,25 @@
+{
+  "name": "healthcare-portal",
+  "private": true,
+  "version": "0.0.0",
+  "workspaces": [
+    "apps/*",
+    "libs/*",
+    "backend/*"
+  ],
+  "scripts": {
+    "dev": "turbo run dev --parallel",
+    "dev:prep": "npm --prefix backend/auth-service run prisma:generate || true",
+    "dev:db": "npm --prefix backend/auth-service run prisma:migrate && npm --prefix backend/auth-service run prisma:seed",
+    "dev:all": "npm run dev:prep && concurrently \"npm --prefix backend/auth-service run dev\" \"npm --prefix apps/mfe-auth run dev\" \"npm --prefix apps/mfe-policies run dev\" \"npm --prefix apps/mfe-claims run dev\" \"npm --prefix apps/shell run dev\"",
+    "build": "turbo run build",
+    "build:libs": "turbo run build --filter=libs/*",
+    "smoke": "node test/smoke.js",
+    "lint": "turbo run lint",
+    "test": "turbo run test"
+  },
+  "devDependencies": {
+    "turbo": "^1.9.3",
+    "concurrently": "^7.6.0"
+  }
+}

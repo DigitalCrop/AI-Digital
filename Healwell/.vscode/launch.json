@@ -1,0 +1,39 @@
+{
+  "version": "0.2.0",
+  "configurations": [
+    {
+      "name": "Launch Auth Service (npm)",
+      "type": "pwa-node",
+      "request": "launch",
+      "runtimeExecutable": "npm",
+      "runtimeArgs": ["run", "dev"],
+      "cwd": "${workspaceFolder}/backend/auth-service",
+      "console": "integratedTerminal",
+      "env": {
+        "NODE_ENV": "development"
+      }
+    },
+    {
+      "name": "Attach to Auth Service (Node)",
+      "type": "pwa-node",
+      "request": "attach",
+      "port": 9229,
+      "cwd": "${workspaceFolder}/backend/auth-service",
+      "restart": true
+    },
+    {
+      "name": "Launch Shell in Chrome",
+      "type": "pwa-chrome",
+      "request": "launch",
+      "url": "http://localhost:3000",
+      "webRoot": "${workspaceFolder}/apps/shell",
+      "userDataDir": "${workspaceFolder}/.vscode/chrome"
+    }
+  ],
+  "compounds": [
+    {
+      "name": "Dev: Auth + Shell",
+      "configurations": ["Launch Auth Service (npm)", "Launch Shell in Chrome"]
+    }
+  ]
+}
