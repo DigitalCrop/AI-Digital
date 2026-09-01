@@ -8,14 +8,15 @@
     "preview": "vite preview"
   },
   "dependencies": {
+    "@healthcare/ui": "file:../../libs/ui",
     "react": "^18.2.0",
-    "react-dom": "^18.2.0",
-    "@healthcare/ui": "file:../../libs/ui"
+    "react-dom": "^18.2.0"
   },
   "devDependencies": {
-    "typescript": "^5.0.0",
-    "vite": "^5.0.0",
+    "@originjs/vite-plugin-federation": "^1.4.1",
+    "@types/react": "^19.2.18",
     "@vitejs/plugin-react": "^3.0.0",
-    "@originjs/vite-plugin-federation": "^2.7.3"
+    "typescript": "^5.0.0",
+    "vite": "^5.0.0"
   }
 }

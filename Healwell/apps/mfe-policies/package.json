@@ -16,6 +16,6 @@
     "typescript": "^5.0.0",
     "vite": "^5.0.0",
     "@vitejs/plugin-react": "^3.0.0",
-    "@originjs/vite-plugin-federation": "^2.7.3"
+    "@originjs/vite-plugin-federation": "^1.4.1"
   }
 }

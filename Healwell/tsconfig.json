@@ -1,19 +1,14 @@
 {
-  "compilerOptions": {
-    "target": "ES2020",
-    "module": "ESNext",
-    "moduleResolution": "Node",
-    "lib": ["DOM", "ES2020"],
+  "compilerOptions": {  
     "jsx": "react-jsx",
-    "strict": true,
-    "noImplicitAny": true,
-    "strictNullChecks": true,
+    "moduleResolution": "node",
     "esModuleInterop": true,
     "skipLibCheck": true,
-    "baseUrl": ".",
+    "baseUrl": "./src",
     "paths": {
-      "@healthcare/*": ["libs/*/src"]
+      "@components/*": ["components/*"]
     }
   },
-  "include": ["apps/**/*", "libs/**/*", "backend/**/*"]
+  "include": ["src", "apps/**/*", "libs/**/*", "backend/**/*"],
+   "implicitDependencies": ["ui"]
 }

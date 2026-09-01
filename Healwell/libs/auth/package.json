@@ -1,7 +1,13 @@
 {
   "name": "@healthcare/auth",
-  "version": "0.0.1",
-  "private": true,
+  "version": "1.0.0",
   "main": "dist/index.js",
-  "types": "dist/index.d.ts"
+  "module": "dist/index.esm.js",
+  "types": "dist/index.d.ts",
+  "exports": {
+    ".": {
+      "import": "./dist/index.esm.js",
+      "require": "./dist/index.js"
+    }
+  }
 }

@@ -1,5 +1,5 @@
 import React, { createContext, useContext, useState } from 'react'
-import apiClient, { setAuthToken } from '@healthcare/api/src/client'
+import apiClient, { setAuthToken } from '../../api/src/client'
 
 type Credentials = { email: string; password: string }
 

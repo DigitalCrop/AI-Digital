@@ -12,17 +12,17 @@ export default function App() {
     <div>
       <header>
         <nav>
-          <Link to="/">Home</Link> | <Link to="/policies">Policies</Link> | <Link to="/claims">Claims</Link> | <Link to="/login">Login</Link>
+          <Link to="">Home</Link> | <Link to="policies">Policies</Link> | <Link to="claims">Claims</Link> | <Link to="login">Login</Link>
         </nav>
       </header>
       <main>
         <React.Suspense fallback={<div>Loading...</div>}>
           <Routes>
-            <Route path="/" element={<Home />} />
-            <Route path="/login" element={<RemoteLogin />} />
-            <Route path="/register" element={<RemoteRegister />} />
-            <Route path="/policies" element={<RemotePolicies />} />
-            <Route path="/claims" element={<RemoteClaims />} />
+            <Route path="" element={<Home />} />
+            <Route path="login" element={<RemoteLogin />} />
+            <Route path="register" element={<RemoteRegister />} />
+            <Route path="policies" element={<RemotePolicies />} />
+            <Route path="claims" element={<RemoteClaims />} />
           </Routes>
         </React.Suspense>
       </main>

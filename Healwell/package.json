@@ -19,7 +19,9 @@
     "test": "turbo run test"
   },
   "devDependencies": {
-    "turbo": "^1.9.3",
-    "concurrently": "^7.6.0"
+    "@types/react": "^19.2.18",
+    "@types/react-dom": "^19.2.4",
+    "concurrently": "^7.6.0",
+    "turbo": "^1.9.3"
   }
 }

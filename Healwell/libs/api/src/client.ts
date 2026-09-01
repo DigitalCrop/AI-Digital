@@ -1,6 +1,7 @@
 import axios from 'axios'
 
-const baseURL = process.env.API_URL || 'http://localhost:4000'
+const runtimeProcess = typeof process !== 'undefined' ? process : undefined
+const baseURL = runtimeProcess?.env?.API_URL || 'http://localhost:4000'
 
 const client = axios.create({
   baseURL,
