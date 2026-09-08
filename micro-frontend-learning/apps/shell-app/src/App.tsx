@@ -2,6 +2,9 @@ import { lazy, Suspense, type ReactNode } from 'react';
 import { Link, Navigate, Route, Routes, useLocation, useNavigate } from 'react-router-dom';
 import { RequireAuth, useAuth } from '@mfe/shared-auth';
 import { Alert, Button, ErrorBoundary, Header, Spinner } from '@mfe/shared-ui';
+const productsEnabled = import.meta.env.VITE_ENABLE_PRODUCTS !== 'false';
+const ordersEnabled = import.meta.env.VITE_ENABLE_ORDERS !== 'false';
+const homePath = productsEnabled ? '/products' : ordersEnabled ? '/orders' : '/login';
 const Products = lazy(() => import('products/Routes'));
 const Orders = lazy(() => import('orders/Routes'));
 function Remote({ name, children }: { name: string; children: ReactNode }) {
@@ -21,12 +24,12 @@ function Login() {
   const auth = useAuth();
   const navigate = useNavigate();
   const location = useLocation();
-  const from = (location.state as { from?: string } | null)?.from ?? '/products';
+  const from = (location.state as { from?: string } | null)?.from ?? homePath;
   async function signIn(email: string) {
     await auth.login(email);
     navigate(from, { replace: true });
   }
-  if (auth.isAuthenticated) return <Navigate to="/products" replace />;
+  if (auth.isAuthenticated) return <Navigate to={homePath} replace />;
   return (
     <section>
       <h1>Sign in</h1>
@@ -47,8 +50,8 @@ export function App() {
       <Header>
         <strong>Federated Shop</strong>
         <nav className="nav" aria-label="Primary">
-          <Link to="/products">Products</Link>
-          <Link to="/orders">Orders</Link>
+          {productsEnabled && <Link to="/products">Products</Link>}
+          {ordersEnabled && <Link to="/orders">Orders</Link>}
           {auth.user ? (
             <>
               <span data-testid="shell-user">{auth.user.email}</span>
@@ -61,7 +64,7 @@ export function App() {
       </Header>
       <main className="main">
         <Routes>
-          <Route path="/" element={<Navigate to="/products" replace />} />
+          <Route path="/" element={<Navigate to={homePath} replace />} />
           <Route path="/login" element={<Login />} />
           <Route
             path="/unauthorized"
@@ -72,26 +75,30 @@ export function App() {
               </Alert>
             }
           />
-          <Route
-            path="/products/*"
-            element={
-              <RequireAuth>
-                <Remote name="Products">
-                  <Products />
-                </Remote>
-              </RequireAuth>
-            }
-          />
-          <Route
-            path="/orders/*"
-            element={
-              <RequireAuth>
-                <Remote name="Orders">
-                  <Orders />
-                </Remote>
-              </RequireAuth>
-            }
-          />
+          {productsEnabled && (
+            <Route
+              path="/products/*"
+              element={
+                <RequireAuth>
+                  <Remote name="Products">
+                    <Products />
+                  </Remote>
+                </RequireAuth>
+              }
+            />
+          )}
+          {ordersEnabled && (
+            <Route
+              path="/orders/*"
+              element={
+                <RequireAuth>
+                  <Remote name="Orders">
+                    <Orders />
+                  </Remote>
+                </RequireAuth>
+              }
+            />
+          )}
           <Route path="*" element={<h1>Page not found</h1>} />
         </Routes>
       </main>
