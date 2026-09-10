@@ -1,0 +1,68 @@
+name: Auth Service CI
+
+on:
+  push:
+    paths:
+      - "backend/auth-service/**"
+  pull_request:
+    paths:
+      - "backend/auth-service/**"
+
+jobs:
+  test:
+    runs-on: ubuntu-latest
+    services:
+      postgres:
+        image: postgres:15
+        env:
+          POSTGRES_USER: postgres
+          POSTGRES_PASSWORD: postgres
+          POSTGRES_DB: healthcare
+        options: >-
+          --health-cmd "pg_isready -U postgres -d healthcare"
+          --health-interval 10s
+          --health-timeout 5s
+          --health-retries 5
+      redis:
+        image: redis:7
+        options: >-
+          --health-cmd "redis-cli ping"
+          --health-interval 10s
+          --health-timeout 5s
+          --health-retries 5
+
+    env:
+      DATABASE_URL: postgresql://postgres:postgres@localhost:5432/healthcare
+      REDIS_URL: redis://localhost:6379
+      NODE_ENV: test
+
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Setup Node
+        uses: actions/setup-node@v4
+        with:
+          node-version: "18"
+
+      - name: Install root dependencies
+        run: npm ci
+
+      - name: Install auth-service dependencies
+        working-directory: backend/auth-service
+        run: npm ci
+
+      - name: Generate Prisma client
+        working-directory: backend/auth-service
+        run: npx prisma generate
+
+      - name: Apply migrations (deploy)
+        working-directory: backend/auth-service
+        run: npx prisma migrate deploy
+
+      - name: Seed database
+        working-directory: backend/auth-service
+        run: npm run prisma:seed
+
+      - name: Run tests
+        working-directory: backend/auth-service
+        run: npm test -- --reporter verbose

@@ -1,0 +1,20 @@
+{
+  "name": "mfe-auth",
+  "sourceRoot": "apps/mfe-auth/src",
+  "projectType": "application",
+  "targets": {
+    "build": {
+      "executor": "@nrwl/vite:build",
+      "options": {
+        "configFile": "apps/mfe-auth/vite.config.ts"
+      }
+    },
+    "dev": {
+      "executor": "@nrwl/vite:dev",
+      "options": {
+        "configFile": "apps/mfe-auth/vite.config.ts"
+      }
+    }
+  },
+  "implicitDependencies": ["ui"]
+}

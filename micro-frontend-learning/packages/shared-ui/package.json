@@ -1,0 +1,15 @@
+{
+  "name": "@mfe/shared-ui",
+  "version": "1.0.0",
+  "type": "module",
+  "exports": {
+    ".": "./src/index.tsx",
+    "./styles.css": "./src/styles.css"
+  },
+  "peerDependencies": {
+    "react": "^19.1.1"
+  },
+  "scripts": {
+    "typecheck": "tsc --noEmit"
+  }
+}

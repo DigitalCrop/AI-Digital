@@ -1,0 +1,14 @@
+{
+  "compilerOptions": {  
+    "jsx": "react-jsx",
+    "moduleResolution": "node",
+    "esModuleInterop": true,
+    "skipLibCheck": true,
+    "baseUrl": "./src",
+    "paths": {
+      "@components/*": ["components/*"]
+    }
+  },
+  "include": ["src", "apps/**/*", "libs/**/*", "backend/**/*"],
+   "implicitDependencies": ["ui"]
+}
